@@ -5,7 +5,13 @@ class PDFBookmarkEmbedder {
     constructor() {
         this.serverUrl = this.getServerUrl()
         this.currentFile = null
-        t            console.log('📤 Sending PDF to server for processing...')
+        this.initializeElements()
+        this.bindEvents()
+    }
+
+    async embedBookmarks(file, bookmarks) {
+        try {
+            console.log('📤 Sending PDF to server for processing...')
             console.log('🗃️ File details:', {
                 name: file.name,
                 size: file.size,
@@ -14,12 +20,26 @@ class PDFBookmarkEmbedder {
             })
             console.log('🔗 Server URL:', `${this.serverUrl}/embed-bookmarks`)
             
-            // Send to serverssedPdfData = null
-        
-        this.initializeElements()
-        this.bindEvents()
-        this.checkServerStatus()
-        this.displayNetworkInfo()
+            // Send to server
+            const formData = new FormData()
+            formData.append('pdf', file)
+            formData.append('bookmarks', JSON.stringify(bookmarks))
+
+            const response = await fetch(`${this.serverUrl}/embed-bookmarks`, {
+                method: 'POST',
+                body: formData
+            })
+
+            if (response.ok) {
+                const blob = await response.blob()
+                return blob
+            } else {
+                throw new Error(`Server error: ${response.status}`)
+            }
+        } catch (error) {
+            console.error('❌ Server error:', error)
+            throw error
+        }
     }
 
     getServerUrl() {
