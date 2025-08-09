@@ -42,7 +42,9 @@ class PDFBookmarkManager {
     async initializePyodide() {
         try {
             this.updateStatus('Initializing Python environment...', 10);
-            this.pyodide = await loadPyodide();
+            this.pyodide = await loadPyodide({
+                indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/"
+            });
             
             this.updateStatus('Installing PyMuPDF...', 30);
             await this.pyodide.loadPackage(['micropip']);
@@ -55,13 +57,13 @@ class PDFBookmarkManager {
             await this.pyodide.runPython(`
                 import fitz
                 import io
-                import js
-                from js import Uint8Array
-                import traceback
+                import base64
                 
-                def add_bookmarks_to_pdf(pdf_bytes):
-                    """Add bookmarks to PDF and return the modified PDF bytes"""
+                def add_bookmarks_to_pdf(pdf_base64):
+                    """Add bookmarks to PDF and return the modified PDF as base64"""
                     try:
+                        # Decode base64 to bytes
+                        pdf_bytes = base64.b64decode(pdf_base64)
                         print(f"Processing PDF of {len(pdf_bytes)} bytes")
                         
                         # Open PDF from bytes
@@ -103,13 +105,16 @@ class PDFBookmarkManager {
                         output_bytes = output_buffer.getvalue()
                         doc.close()
                         
+                        # Convert back to base64 for transfer
+                        output_base64 = base64.b64encode(output_bytes).decode('utf-8')
                         print(f"Generated output PDF of {len(output_bytes)} bytes")
-                        return output_bytes
+                        return output_base64
                     except Exception as e:
+                        import traceback
                         error_msg = f"Error processing PDF: {str(e)}"
                         print(error_msg)
                         print(traceback.format_exc())
-                        raise Exception(error_msg)
+                        return f"ERROR: {error_msg}"
             `);
             
             this.updateStatus('Ready to process PDFs!', 100);
@@ -176,28 +181,20 @@ class PDFBookmarkManager {
             const arrayBuffer = await file.arrayBuffer();
             const uint8Array = new Uint8Array(arrayBuffer);
             
-            this.updateStatus('Processing PDF and adding bookmarks...', 40);
+            // Convert to base64 for reliable transfer to Python
+            this.updateStatus('Converting PDF data...', 30);
+            const base64String = btoa(String.fromCharCode.apply(null, uint8Array));
             
-            // Pass the PDF to Python for processing with better error handling
-            this.pyodide.globals.set('pdf_data', uint8Array);
+            this.updateStatus('Processing PDF and adding bookmarks...', 50);
+            
+            // Pass the PDF to Python for processing
+            this.pyodide.globals.set('pdf_base64_data', base64String);
             
             this.updateStatus('Adding bookmarks to pages 1, 2, and 5...', 70);
             
             const result = await this.pyodide.runPython(`
-                import traceback
-                try:
-                    # Convert JS array to Python bytes
-                    pdf_bytes = bytes(pdf_data.to_py())
-                    
-                    # Process the PDF
-                    processed_pdf = add_bookmarks_to_pdf(pdf_bytes)
-                    
-                    # Return the processed PDF bytes
-                    processed_pdf
-                except Exception as e:
-                    print(f"Python error: {e}")
-                    print(traceback.format_exc())
-                    f"ERROR: {str(e)}"
+                result = add_bookmarks_to_pdf(pdf_base64_data)
+                result
             `);
 
             if (typeof result === 'string' && result.startsWith('ERROR:')) {
@@ -208,8 +205,17 @@ class PDFBookmarkManager {
                 throw new Error('No data returned from PDF processing');
             }
 
+            this.updateStatus('Converting result...', 85);
+            
+            // Convert base64 back to binary for download
+            const binaryString = atob(result);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            
             this.updateStatus('Finalizing...', 90);
-            this.processedPdfData = result;
+            this.processedPdfData = bytes;
             
             this.updateStatus('Complete!', 100);
             setTimeout(() => {
