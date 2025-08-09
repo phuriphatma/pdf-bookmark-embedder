@@ -302,6 +302,22 @@
             background: white;
         }
 
+        .pdf-page-placeholder {
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            background: #f0f0f0;
+            border: 2px dashed #ccc;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .pdf-page-placeholder:hover {
+            background: #e8e8e8;
+            border-color: #007AFF;
+        }
+
         .pdf-page canvas {
             display: block;
             max-width: 100%;
@@ -850,6 +866,12 @@
                 this.quickBookmarkMode = false;
                 this.serverUrl = this.getServerUrl();
                 
+                // Virtual scrolling properties
+                this.pageWidth = 0;
+                this.pageHeight = 0;
+                this.renderedPages = new Set();
+                this.pageObserver = null;
+                
                 this.initializeElements();
                 this.bindEvents();
                 this.bindKeyboardShortcuts();
@@ -1085,6 +1107,9 @@
                     this.updateStatus('Loading PDF...');
                     this.elements.loadingState.textContent = 'Loading PDF...';
                     
+                    // Clean up previous PDF resources
+                    this.cleanup();
+                    
                     this.currentFile = file;
                     
                     // Update file info
@@ -1105,7 +1130,7 @@
                     this.bookmarks = [];
                     this.updateBookmarksList();
 
-                    // Render all pages
+                    // Render pages with virtual scrolling
                     await this.renderAllPages();
                     this.updateNavigationState();
 
@@ -1115,22 +1140,142 @@
                 }
             }
 
+            cleanup() {
+                // Clean up observers and rendered pages
+                if (this.pageObserver) {
+                    this.pageObserver.disconnect();
+                    this.pageObserver = null;
+                }
+                
+                if (this.renderedPages) {
+                    this.renderedPages.clear();
+                }
+                
+                // Clear PDF viewer content
+                this.elements.pdfViewer.innerHTML = '<div class="loading" id="loadingState">Loading PDF...</div>';
+                
+                // Force garbage collection of PDF.js resources
+                if (this.pdfDoc) {
+                    this.pdfDoc.destroy();
+                    this.pdfDoc = null;
+                }
+            }
+
             async renderAllPages() {
+                // Create virtual scrolling container instead of rendering all pages
                 const container = document.createElement('div');
                 container.className = 'pdf-canvas-container';
                 
                 this.elements.pdfViewer.innerHTML = '';
                 this.elements.pdfViewer.appendChild(container);
 
-                for (let pageNum = 1; pageNum <= this.totalPages; pageNum++) {
-                    await this.renderPage(pageNum, container);
-                }
+                // Calculate page dimensions first
+                await this.calculatePageDimensions();
+                
+                // Create placeholder elements for all pages
+                this.createPagePlaceholders(container);
+                
+                // Render only visible pages initially
+                await this.renderVisiblePages();
+                
+                // Set up intersection observer for lazy loading
+                this.setupPageObserver();
 
                 this.updateStatus('PDF loaded successfully');
             }
 
-            async renderPage(pageNum, container) {
+            async calculatePageDimensions() {
+                // Get first page to calculate dimensions
+                const firstPage = await this.pdfDoc.getPage(1);
+                const viewport = firstPage.getViewport({ scale: this.scale });
+                
+                this.pageWidth = viewport.width;
+                this.pageHeight = viewport.height;
+                this.renderedPages = new Set(); // Track which pages are rendered
+            }
+
+            createPagePlaceholders(container) {
+                // Create placeholder divs for all pages
+                for (let pageNum = 1; pageNum <= this.totalPages; pageNum++) {
+                    const pageDiv = document.createElement('div');
+                    pageDiv.className = 'pdf-page pdf-page-placeholder';
+                    pageDiv.dataset.pageNumber = pageNum;
+                    pageDiv.style.width = `${this.pageWidth}px`;
+                    pageDiv.style.height = `${this.pageHeight}px`;
+                    pageDiv.style.backgroundColor = '#f0f0f0';
+                    pageDiv.style.display = 'flex';
+                    pageDiv.style.alignItems = 'center';
+                    pageDiv.style.justifyContent = 'center';
+                    pageDiv.style.color = '#666';
+                    pageDiv.style.fontSize = '14px';
+                    pageDiv.innerHTML = `<div>Loading page ${pageNum}...</div>`;
+                    
+                    // Add click handler for manual loading
+                    pageDiv.addEventListener('click', () => {
+                        if (!this.renderedPages.has(pageNum)) {
+                            this.renderSinglePage(pageNum, pageDiv);
+                        }
+                    });
+                    
+                    container.appendChild(pageDiv);
+                }
+            }
+
+            setupPageObserver() {
+                // Clean up existing observer
+                if (this.pageObserver) {
+                    this.pageObserver.disconnect();
+                }
+
+                // Create intersection observer for lazy loading
+                this.pageObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const pageNum = parseInt(entry.target.dataset.pageNumber);
+                            if (!this.renderedPages.has(pageNum)) {
+                                this.renderSinglePage(pageNum, entry.target);
+                            }
+                        } else {
+                            // Optionally unload pages that are far from viewport to save memory
+                            const pageNum = parseInt(entry.target.dataset.pageNumber);
+                            if (this.renderedPages.has(pageNum)) {
+                                const rect = entry.target.getBoundingClientRect();
+                                const viewerRect = this.elements.pdfViewer.getBoundingClientRect();
+                                const distance = Math.abs(rect.top - viewerRect.top);
+                                
+                                // Unload pages that are more than 3 viewport heights away
+                                if (distance > viewerRect.height * 3) {
+                                    this.unloadPage(pageNum, entry.target);
+                                }
+                            }
+                        }
+                    });
+                }, {
+                    root: this.elements.pdfViewer,
+                    rootMargin: '50% 0px', // Start loading when page is 50% of viewport away
+                    threshold: 0
+                });
+
+                // Observe all page placeholders
+                const pages = this.elements.pdfViewer.querySelectorAll('.pdf-page');
+                pages.forEach(page => this.pageObserver.observe(page));
+            }
+
+            async renderVisiblePages() {
+                // Render the first few pages immediately
+                const initialPagesToRender = Math.min(3, this.totalPages);
+                for (let pageNum = 1; pageNum <= initialPagesToRender; pageNum++) {
+                    const pageElement = this.elements.pdfViewer.querySelector(`[data-page-number="${pageNum}"]`);
+                    if (pageElement) {
+                        await this.renderSinglePage(pageNum, pageElement);
+                    }
+                }
+            }
+
+            async renderSinglePage(pageNum, pageElement) {
                 try {
+                    if (this.renderedPages.has(pageNum)) return; // Already rendered
+                    
                     const page = await this.pdfDoc.getPage(pageNum);
                     const viewport = page.getViewport({ scale: this.scale });
 
@@ -1140,12 +1285,10 @@
                     canvas.height = viewport.height;
                     canvas.width = viewport.width;
 
-                    // Create page container
-                    const pageDiv = document.createElement('div');
-                    pageDiv.className = 'pdf-page';
-                    pageDiv.dataset.pageNumber = pageNum;
-                    pageDiv.appendChild(canvas);
-                    container.appendChild(pageDiv);
+                    // Update page element
+                    pageElement.innerHTML = '';
+                    pageElement.className = 'pdf-page';
+                    pageElement.appendChild(canvas);
 
                     // Render page
                     const renderContext = {
@@ -1154,9 +1297,41 @@
                     };
 
                     await page.render(renderContext).promise;
+                    this.renderedPages.add(pageNum);
 
                 } catch (error) {
                     console.error(`Error rendering page ${pageNum}:`, error);
+                    pageElement.innerHTML = `<div style="color: red;">Error loading page ${pageNum}</div>`;
+                }
+            }
+
+            unloadPage(pageNum, pageElement) {
+                // Convert rendered page back to placeholder to save memory
+                pageElement.innerHTML = `<div>Page ${pageNum} (tap to reload)</div>`;
+                pageElement.className = 'pdf-page pdf-page-placeholder';
+                pageElement.style.backgroundColor = '#f0f0f0';
+                pageElement.style.display = 'flex';
+                pageElement.style.alignItems = 'center';
+                pageElement.style.justifyContent = 'center';
+                pageElement.style.color = '#666';
+                pageElement.style.fontSize = '14px';
+                this.renderedPages.delete(pageNum);
+            }
+
+            async renderPage(pageNum, container) {
+                // Legacy method kept for compatibility - now calls renderSinglePage
+                const pageElement = container.querySelector(`[data-page-number="${pageNum}"]`);
+                if (pageElement) {
+                    await this.renderSinglePage(pageNum, pageElement);
+                } else {
+                    // Create new page element if it doesn't exist
+                    const pageDiv = document.createElement('div');
+                    pageDiv.className = 'pdf-page-placeholder';
+                    pageDiv.dataset.pageNumber = pageNum;
+                    pageDiv.style.width = `${this.pageWidth || 600}px`;
+                    pageDiv.style.height = `${this.pageHeight || 800}px`;
+                    container.appendChild(pageDiv);
+                    await this.renderSinglePage(pageNum, pageDiv);
                 }
             }
 
@@ -1164,7 +1339,7 @@
                 if (!this.pdfDoc) return;
 
                 const viewer = this.elements.pdfViewer;
-                const pages = viewer.querySelectorAll('.pdf-page');
+                const pages = viewer.querySelectorAll('.pdf-page, .pdf-page-placeholder');
                 
                 let currentPage = 1;
                 const scrollTop = viewer.scrollTop;
@@ -1184,6 +1359,12 @@
                 if (currentPage !== this.currentPage) {
                     this.currentPage = currentPage;
                     this.updateNavigationState();
+                    
+                    // Ensure current page is rendered
+                    const currentPageElement = viewer.querySelector(`[data-page-number="${currentPage}"]`);
+                    if (currentPageElement && !this.renderedPages.has(currentPage)) {
+                        this.renderSinglePage(currentPage, currentPageElement);
+                    }
                 }
             }
 
@@ -1232,6 +1413,11 @@
                 this.elements.zoomLevel.textContent = Math.round(this.scale * 100) + '%';
                 
                 if (this.pdfDoc) {
+                    // Clear rendered pages and re-render with new scale
+                    this.renderedPages.clear();
+                    if (this.pageObserver) {
+                        this.pageObserver.disconnect();
+                    }
                     this.renderAllPages();
                 }
             }
@@ -1245,6 +1431,12 @@
                         const viewport = page.getViewport({ scale: 1 });
                         this.scale = availableWidth / viewport.width;
                         this.elements.zoomLevel.textContent = Math.round(this.scale * 100) + '%';
+                        
+                        // Clear rendered pages and re-render with new scale
+                        this.renderedPages.clear();
+                        if (this.pageObserver) {
+                            this.pageObserver.disconnect();
+                        }
                         this.renderAllPages();
                     });
                 }
