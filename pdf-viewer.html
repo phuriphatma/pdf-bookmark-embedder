@@ -292,6 +292,10 @@
             align-items: center;
             padding: 20px;
             min-height: 100%;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
         }
 
         .pdf-page {
@@ -300,6 +304,8 @@
             border-radius: 4px;
             overflow: hidden;
             background: white;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .pdf-page-placeholder {
@@ -311,6 +317,8 @@
             border: 2px dashed #ccc;
             cursor: pointer;
             transition: all 0.2s ease;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .pdf-page-placeholder:hover {
@@ -322,6 +330,7 @@
             display: block;
             max-width: 100%;
             height: auto;
+            box-sizing: border-box;
         }
 
         .loading {
@@ -1051,6 +1060,47 @@
                 this.elements.quickBookmarkBtn.addEventListener('click', () => {
                     this.showQuickBookmark();
                 });
+
+                // Window resize handler for viewport changes
+                window.addEventListener('resize', () => {
+                    if (this.pdfDoc) {
+                        // Debounce resize to avoid excessive recalculations
+                        clearTimeout(this.resizeTimeout);
+                        this.resizeTimeout = setTimeout(() => {
+                            this.handleViewportResize();
+                        }, 300);
+                    }
+                });
+            }
+
+            async handleViewportResize() {
+                if (!this.pdfDoc) return;
+                
+                // Recalculate page dimensions for new viewport
+                await this.calculatePageDimensions();
+                
+                // Update placeholder dimensions
+                const viewer = this.elements.pdfViewer;
+                const availableWidth = viewer.clientWidth - 40;
+                const constrainedWidth = Math.min(this.pageWidth, availableWidth);
+                
+                const placeholders = viewer.querySelectorAll('.pdf-page, .pdf-page-placeholder');
+                placeholders.forEach(page => {
+                    page.style.width = `${constrainedWidth}px`;
+                    page.style.height = `${this.pageHeight}px`;
+                    page.style.maxWidth = '100%';
+                });
+                
+                // Re-render visible pages with new dimensions
+                const visiblePages = Array.from(this.renderedPages);
+                this.renderedPages.clear();
+                
+                for (const pageNum of visiblePages) {
+                    const pageElement = viewer.querySelector(`[data-page-number="${pageNum}"]`);
+                    if (pageElement) {
+                        await this.renderSinglePage(pageNum, pageElement);
+                    }
+                }
             }
 
             bindKeyboardShortcuts() {
@@ -1189,25 +1239,48 @@
                 const firstPage = await this.pdfDoc.getPage(1);
                 const viewport = firstPage.getViewport({ scale: this.scale });
                 
-                this.pageWidth = viewport.width;
-                this.pageHeight = viewport.height;
+                // Get available width from the PDF viewer container
+                const viewer = this.elements.pdfViewer;
+                const availableWidth = viewer.clientWidth - 40; // Account for padding
+                
+                // Ensure page width doesn't exceed available width
+                if (viewport.width > availableWidth) {
+                    const constrainedScale = availableWidth / viewport.width * this.scale;
+                    const constrainedViewport = firstPage.getViewport({ scale: constrainedScale });
+                    this.pageWidth = constrainedViewport.width;
+                    this.pageHeight = constrainedViewport.height;
+                    // Update scale to reflect the constraint
+                    this.scale = constrainedScale;
+                    this.elements.zoomLevel.textContent = Math.round(this.scale * 100) + '%';
+                } else {
+                    this.pageWidth = viewport.width;
+                    this.pageHeight = viewport.height;
+                }
+                
                 this.renderedPages = new Set(); // Track which pages are rendered
             }
 
             createPagePlaceholders(container) {
+                // Get available width for proper sizing
+                const viewer = this.elements.pdfViewer;
+                const availableWidth = viewer.clientWidth - 40;
+                const constrainedWidth = Math.min(this.pageWidth, availableWidth);
+                
                 // Create placeholder divs for all pages
                 for (let pageNum = 1; pageNum <= this.totalPages; pageNum++) {
                     const pageDiv = document.createElement('div');
                     pageDiv.className = 'pdf-page pdf-page-placeholder';
                     pageDiv.dataset.pageNumber = pageNum;
-                    pageDiv.style.width = `${this.pageWidth}px`;
+                    pageDiv.style.width = `${constrainedWidth}px`;
                     pageDiv.style.height = `${this.pageHeight}px`;
+                    pageDiv.style.maxWidth = '100%';
                     pageDiv.style.backgroundColor = '#f0f0f0';
                     pageDiv.style.display = 'flex';
                     pageDiv.style.alignItems = 'center';
                     pageDiv.style.justifyContent = 'center';
                     pageDiv.style.color = '#666';
                     pageDiv.style.fontSize = '14px';
+                    pageDiv.style.boxSizing = 'border-box';
                     pageDiv.innerHTML = `<div>Loading page ${pageNum}...</div>`;
                     
                     // Add click handler for manual loading
@@ -1277,17 +1350,34 @@
                     if (this.renderedPages.has(pageNum)) return; // Already rendered
                     
                     const page = await this.pdfDoc.getPage(pageNum);
-                    const viewport = page.getViewport({ scale: this.scale });
+                    
+                    // Calculate scale to ensure page fits within viewport
+                    const viewer = this.elements.pdfViewer;
+                    const availableWidth = viewer.clientWidth - 40;
+                    const baseViewport = page.getViewport({ scale: 1 });
+                    
+                    let renderScale = this.scale;
+                    if (baseViewport.width * this.scale > availableWidth) {
+                        renderScale = availableWidth / baseViewport.width;
+                    }
+                    
+                    const viewport = page.getViewport({ scale: renderScale });
 
-                    // Create canvas
+                    // Create canvas with proper dimensions
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
+                    
+                    // Set canvas size and ensure it fits in container
                     canvas.height = viewport.height;
-                    canvas.width = viewport.width;
+                    canvas.width = Math.min(viewport.width, availableWidth);
 
-                    // Update page element
+                    // Update page element with constrained dimensions
                     pageElement.innerHTML = '';
                     pageElement.className = 'pdf-page';
+                    pageElement.style.width = `${canvas.width}px`;
+                    pageElement.style.height = `${canvas.height}px`;
+                    pageElement.style.maxWidth = '100%';
+                    pageElement.style.overflow = 'hidden';
                     pageElement.appendChild(canvas);
 
                     // Render page
