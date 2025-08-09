@@ -804,6 +804,7 @@
                     <button class="nav-btn touch-btn" id="addBookmarkBtn" title="Add Bookmark (Cmd+H)">📌 Bookmark</button>
                     <button class="nav-btn touch-btn" id="gotoPageBtn" title="Go to Page (Cmd+G)">🔍 Go to</button>
                     <button class="nav-btn touch-btn" id="quickBookmarkBtn" title="Quick Bookmark (Type+Enter)">⚡ Quick</button>
+                    <button class="nav-btn touch-btn" id="exportPdfBtn" title="Export PDF with bookmarks" style="background-color: #28a745;">📤 Export</button>
                 </div>
 
                 <div class="shortcuts-info">
@@ -1002,7 +1003,8 @@
                     // Touch control buttons
                     addBookmarkBtn: document.getElementById('addBookmarkBtn'),
                     gotoPageBtn: document.getElementById('gotoPageBtn'),
-                    quickBookmarkBtn: document.getElementById('quickBookmarkBtn')
+                    quickBookmarkBtn: document.getElementById('quickBookmarkBtn'),
+                    exportPdfBtn: document.getElementById('exportPdfBtn')
                 };
             }
 
@@ -1059,6 +1061,10 @@
 
                 this.elements.quickBookmarkBtn.addEventListener('click', () => {
                     this.showQuickBookmark();
+                });
+
+                this.elements.exportPdfBtn.addEventListener('click', () => {
+                    this.exportBookmarkedPDF();
                 });
 
                 // Window resize handler for viewport changes
@@ -1663,6 +1669,7 @@
                 this.elements.addBookmarkBtn.disabled = !hasPDF;
                 this.elements.gotoPageBtn.disabled = !hasPDF;
                 this.elements.quickBookmarkBtn.disabled = !hasPDF;
+                this.elements.exportPdfBtn.disabled = !hasPDF;
                 
                 // Update active bookmark
                 this.updateBookmarksList();
@@ -1692,8 +1699,15 @@
 
             // Export bookmarks functionality
             async exportBookmarkedPDF() {
-                if (!this.currentFile || this.bookmarks.length === 0) {
+                if (!this.currentFile) {
+                    this.updateStatus('No PDF file loaded');
+                    alert('Please load a PDF file first');
+                    return;
+                }
+                
+                if (this.bookmarks.length === 0) {
                     this.updateStatus('No bookmarks to export');
+                    alert('Please add some bookmarks first');
                     return;
                 }
 
@@ -1709,6 +1723,9 @@
                         level: 1
                     })));
                     
+                    console.log('Exporting with bookmarks:', this.bookmarks);
+                    console.log('Server URL:', this.serverUrl);
+                    
                     formData.append('pdf', this.currentFile);
                     formData.append('bookmarks', bookmarkData);
 
@@ -1719,15 +1736,19 @@
 
                     if (response.ok) {
                         const blob = await response.blob();
-                        this.downloadBlob(blob, `${this.currentFile.name.replace('.pdf', '')}_bookmarked.pdf`);
-                        this.updateStatus('PDF exported with bookmarks');
+                        const filename = `${this.currentFile.name.replace('.pdf', '')}_bookmarked.pdf`;
+                        this.downloadBlob(blob, filename);
+                        this.updateStatus(`PDF exported with ${this.bookmarks.length} bookmarks`);
+                        alert(`PDF exported successfully with ${this.bookmarks.length} bookmarks!`);
                     } else {
-                        throw new Error('Server error: ' + response.status);
+                        const errorText = await response.text();
+                        throw new Error(`Server error: ${response.status} - ${errorText}`);
                     }
 
                 } catch (error) {
                     console.error('Export error:', error);
                     this.updateStatus('Export failed: ' + error.message);
+                    alert('Export failed: ' + error.message + '\n\nPlease check if the server is running.');
                 }
             }
 
@@ -1755,12 +1776,31 @@
         // Add export button to toolbar
         document.addEventListener('DOMContentLoaded', () => {
             const toolbar = document.querySelector('.toolbar .zoom-controls');
-            const exportBtn = document.createElement('button');
-            exportBtn.className = 'nav-btn';
-            exportBtn.textContent = '📤 Export PDF';
-            exportBtn.style.marginLeft = '10px';
-            exportBtn.onclick = () => pdfManager.exportBookmarkedPDF();
-            toolbar.appendChild(exportBtn);
+            if (toolbar) {
+                const exportBtn = document.createElement('button');
+                exportBtn.className = 'nav-btn';
+                exportBtn.textContent = '📤 Export PDF';
+                exportBtn.title = 'Export PDF with bookmarks';
+                exportBtn.style.marginLeft = '10px';
+                exportBtn.style.backgroundColor = '#28a745';
+                exportBtn.onclick = () => {
+                    console.log('Export button clicked');
+                    pdfManager.exportBookmarkedPDF();
+                };
+                
+                // Add export button with better visibility
+                exportBtn.addEventListener('mouseenter', () => {
+                    exportBtn.style.backgroundColor = '#218838';
+                });
+                exportBtn.addEventListener('mouseleave', () => {
+                    exportBtn.style.backgroundColor = '#28a745';
+                });
+                
+                toolbar.appendChild(exportBtn);
+                console.log('Export button added to toolbar');
+            } else {
+                console.error('Toolbar not found');
+            }
         });
     </script>
 </body>
