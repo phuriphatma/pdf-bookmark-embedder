@@ -1,70 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>PDF Bookmark Embedder</title>
-    <link rel="stylesheet" href="/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Bookmark Manager</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
     <div class="container">
         <header>
-            <h1>📄 PDF Bookmark Embedder</h1>
-            <p>Upload a PDF and get it back with bookmarks on pages 1, 3, and 6</p>
-            <div id="networkInfo" class="network-info" style="display: none;">
-                <p>📱 <strong>iPad Access:</strong> <span id="ipadUrl"></span></p>
-            </div>
+            <h1>📖 PDF Bookmark Manager</h1>
+            <p>Upload a PDF and add bookmarks to pages 1, 2, and 5</p>
         </header>
 
         <main>
-            <div class="upload-area" id="uploadArea">
-                <div class="upload-content">
-                    <div class="upload-icon">📁</div>
-                    <h2>Drop PDF here or click to upload</h2>
-                    <p>Supports PDF files up to 50MB</p>
-                    <input type="file" id="fileInput" accept=".pdf" hidden>
-                    <button id="uploadBtn" class="btn-primary">Choose PDF File</button>
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                            <polyline points="7,10 12,15 17,10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <h3>Drop PDF file here or click to browse</h3>
+                        <p>Maximum file size: 50MB</p>
+                    </div>
+                    <input type="file" id="pdfInput" accept=".pdf" hidden>
                 </div>
             </div>
 
-            <div class="processing" id="processing" style="display: none;">
-                <div class="spinner"></div>
-                <h2>Processing PDF...</h2>
-                <p id="processingStatus">Adding bookmarks to pages 1, 3, and 6</p>
+            <div class="status-section" id="statusSection" style="display: none;">
+                <div class="status-card">
+                    <div class="status-header">
+                        <h3>Processing Status</h3>
+                    </div>
+                    <div class="status-content">
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill"></div>
+                            </div>
+                            <span class="progress-text" id="progressText">0%</span>
+                        </div>
+                        <p class="status-message" id="statusMessage">Initializing...</p>
+                    </div>
+                </div>
             </div>
 
-            <div class="result" id="result" style="display: none;">
-                <div class="success-icon">✅</div>
-                <h2>PDF Ready!</h2>
-                <p>Your PDF has been processed with bookmarks added.</p>
-                <button id="downloadBtn" class="btn-primary">📥 Download PDF with Bookmarks</button>
-                <button id="newFileBtn" class="btn-secondary">Upload Another PDF</button>
+            <div class="result-section" id="resultSection" style="display: none;">
+                <div class="result-card">
+                    <div class="result-header">
+                        <h3>✅ Processing Complete</h3>
+                    </div>
+                    <div class="result-content">
+                        <p>Your PDF has been successfully processed with bookmarks added to pages 1, 2, and 5.</p>
+                        <button id="downloadBtn" class="download-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"></path>
+                                <polyline points="7,10 12,15 17,10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Download PDF with Bookmarks
+                        </button>
+                        <button id="resetBtn" class="reset-btn">Process Another PDF</button>
+                    </div>
+                </div>
             </div>
 
-            <div class="error" id="error" style="display: none;">
-                <div class="error-icon">❌</div>
-                <h2>Processing Failed</h2>
-                <p id="errorMessage">Something went wrong. Please try again.</p>
-                <button id="retryBtn" class="btn-secondary">Try Again</button>
+            <div class="error-section" id="errorSection" style="display: none;">
+                <div class="error-card">
+                    <div class="error-header">
+                        <h3>❌ Error</h3>
+                    </div>
+                    <div class="error-content">
+                        <p id="errorMessage">An error occurred while processing the PDF.</p>
+                        <button id="errorResetBtn" class="reset-btn">Try Again</button>
+                    </div>
+                </div>
             </div>
         </main>
 
         <footer>
-            <div class="info">
-                <p><strong>What this does:</strong></p>
-                <ul>
-                    <li>Automatically adds bookmarks to pages 1, 3, and 6</li>
-                    <li>Bookmarks work in all PDF viewers (Adobe Reader, Preview, etc.)</li>
-                    <li>Optimized for iOS Safari and mobile devices</li>
-                    <li>Secure processing - files are not stored on the server</li>
-                </ul>
-            </div>
+            <p>Powered by PyMuPDF and Pyodide • Runs entirely in your browser</p>
         </footer>
     </div>
 
-    <script type="module" src="/main.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <script src="script.js"></script>
 </body>
-
 </html>

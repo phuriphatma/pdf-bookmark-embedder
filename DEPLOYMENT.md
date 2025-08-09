@@ -1,139 +1,127 @@
-# 🚀 Deployment Guide - PDF Bookmark Embedder
+# Deployment Guide for PDF Bookmark Manager
 
-Deploy your PDF Bookmark Embedder to the cloud so you can access it from anywhere, even when your computer is off.
+## Quick Start
 
-## 🌟 Recommended: Railway (Easiest)
+### Local Testing
+1. **Start local server:**
+   ```bash
+   ./start-server.sh
+   ```
+   Or manually:
+   ```bash
+   python -m http.server 8000
+   ```
 
-Railway offers free hosting and automatic deployments from GitHub.
+2. **Open in browser:**
+   - Main app: http://localhost:8000
+   - Test page: http://localhost:8000/test.html
 
-### Steps:
+### GitHub Pages Deployment
 
-1. **Create GitHub Repository**
+#### Option 1: Using GitHub Web Interface
+1. Create a new repository on GitHub
+2. Upload all files from this folder to the repository
+3. Go to Settings > Pages
+4. Select "Deploy from a branch"
+5. Choose "main" branch and "/ (root)" folder
+6. Wait for deployment (usually 1-2 minutes)
+7. Access your app at: `https://yourusername.github.io/repository-name`
+
+#### Option 2: Using Git Commands
 ```bash
-# In your project directory
+# Initialize git repository
 git init
+
+# Add all files
 git add .
-git commit -m "Initial commit"
-# Create a repo on GitHub and push
-git remote add origin https://github.com/yourusername/pdf-bookmark-embedder.git
+
+# Commit
+git commit -m "Initial commit - PDF Bookmark Manager"
+
+# Add remote (replace with your repository URL)
+git remote add origin https://github.com/yourusername/pdf-bookmark-manager.git
+
+# Push to GitHub
+git branch -M main
 git push -u origin main
 ```
 
-2. **Deploy to Railway**
-   - Go to [railway.app](https://railway.app)
-   - Sign up with GitHub
-   - Click "New Project" → "Deploy from GitHub repo"
-   - Select your repository
-   - Railway will automatically detect and deploy your app!
+Then follow steps 3-7 from Option 1.
 
-3. **Access Your App**
-   - Railway will provide a URL like `https://yourapp.railway.app`
-   - Your app will be accessible worldwide!
+## Features
 
----
+✅ **Client-side processing** - No server required  
+✅ **Works on iPads and mobile devices**  
+✅ **GitHub Pages compatible**  
+✅ **Privacy-focused** - files never leave your browser  
+✅ **Automatic bookmarks** for pages 1, 2, and 5  
 
-## 🔵 Alternative: Render (Free Tier)
+## Browser Requirements
 
-### Steps:
+- Modern browser with WebAssembly support
+- JavaScript enabled
+- File API support (for file uploads)
 
-1. **Create GitHub Repository** (same as above)
+## File Structure
 
-2. **Deploy to Render**
-   - Go to [render.com](https://render.com)
-   - Sign up with GitHub
-   - Click "New" → "Web Service"
-   - Connect your GitHub repository
-   - Use these settings:
-     - **Build Command**: `chmod +x start_production.sh && ./start_production.sh`
-     - **Start Command**: `python server/production_server.py`
-     - **Environment**: `Python 3`
-
----
-
-## 🟢 Alternative: Heroku
-
-### Steps:
-
-1. **Install Heroku CLI**
-```bash
-# macOS
-brew install heroku/brew/heroku
+```
+pdf-bookmark-manager/
+├── index.html          # Main application
+├── style.css           # Styling
+├── script.js           # Application logic
+├── test.html           # Browser compatibility test
+├── README.md           # Documentation
+├── package.json        # Project metadata
+├── start-server.sh     # Local server script
+├── _config.yml         # GitHub Pages config
+└── .github/
+    └── workflows/
+        └── deploy.yml   # GitHub Actions deployment
 ```
 
-2. **Deploy**
-```bash
-# Login to Heroku
-heroku login
+## Troubleshooting
 
-# Create app
-heroku create your-pdf-bookmark-app
+### "Failed to initialize" error
+- Ensure you're serving files via HTTP/HTTPS (not file:// protocol)
+- Check browser console for specific error messages
+- Try the test.html page to verify browser compatibility
 
-# Add Node.js and Python buildpacks
-heroku buildpacks:add heroku/nodejs
-heroku buildpacks:add heroku/python
+### Pyodide loading issues
+- Check internet connection (Pyodide loads from CDN)
+- Verify WebAssembly support in browser
+- Some corporate firewalls may block CDN resources
 
-# Deploy
-git push heroku main
+### GitHub Pages not updating
+- Check Actions tab for deployment status
+- Ensure all files are committed and pushed
+- GitHub Pages may take a few minutes to update
+
+## Customization
+
+### Changing bookmark labels
+Edit the `script.js` file and modify the bookmark creation section:
+
+```python
+# Add bookmark for page 1 if it exists
+if len(doc) >= 1:
+    bookmarks.append([1, "Your Custom Label", 1])
 ```
 
----
+### Adding more bookmarks
+Modify the Python code in `script.js` to add bookmarks for additional pages:
 
-## 🟡 Alternative: Google Cloud Platform
-
-### Steps:
-
-1. **Install Google Cloud CLI**
-2. **Deploy**
-```bash
-gcloud app deploy app.yaml
+```python
+# Add bookmark for page 10 if it exists
+if len(doc) >= 10:
+    bookmarks.append([1, "Page 10", 10])
 ```
 
----
+### Styling changes
+Modify `style.css` to change the appearance, colors, or layout.
 
-## 🔧 Environment Variables
+## Security Notes
 
-For any platform, you may need to set:
-- `PORT`: Server port (usually auto-detected)
-- `NODE_ENV`: Set to `production`
-
----
-
-## 📱 Usage After Deployment
-
-1. **Access your app** at the provided URL
-2. **Upload PDFs** and create bookmarks
-3. **Works on any device** - iOS Safari, Android, desktop
-4. **Always available** - even when your computer is off!
-
----
-
-## 🆓 Free Tier Limits
-
-- **Railway**: 500 hours/month, 1GB RAM
-- **Render**: 750 hours/month, 512MB RAM
-- **Heroku**: 1000 hours/month (with credit card)
-
-All should be sufficient for personal use!
-
----
-
-## 🐛 Troubleshooting
-
-If deployment fails:
-
-1. **Check build logs** in your platform's dashboard
-2. **Ensure all files are committed** to Git
-3. **Verify Python dependencies** in `server/requirements.txt`
-4. **Test locally first** with `./start_production.sh`
-
----
-
-## 🔄 Updates
-
-To update your deployed app:
-1. Make changes locally
-2. Commit to Git: `git add . && git commit -m "Update"`
-3. Push to GitHub: `git push`
-4. Most platforms auto-deploy from GitHub!
-
-Your PDF bookmark tool will be available 24/7 from anywhere in the world! 🌍
+- All processing happens in the browser
+- No files are uploaded to external servers
+- Uses secure WebAssembly technology
+- No personal data is collected or stored

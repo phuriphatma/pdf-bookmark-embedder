@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test PDF Bookmark Manager</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .fail { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>PDF Bookmark Manager - Test Page</h1>
+    <div id="tests"></div>
+    
+    <script>
+        const tests = document.getElementById('tests');
+        
+        function addTest(name, passed, message) {
+            const div = document.createElement('div');
+            div.className = `test-result ${passed ? 'pass' : 'fail'}`;
+            div.innerHTML = `<strong>${name}:</strong> ${message}`;
+            tests.appendChild(div);
+        }
+        
+        // Test WebAssembly support
+        const wasmSupported = typeof WebAssembly === 'object';
+        addTest('WebAssembly Support', wasmSupported, 
+            wasmSupported ? 'WebAssembly is supported' : 'WebAssembly is not supported');
+        
+        // Test File API support
+        const fileApiSupported = typeof FileReader === 'function';
+        addTest('File API Support', fileApiSupported,
+            fileApiSupported ? 'File API is supported' : 'File API is not supported');
+        
+        // Test Blob support
+        const blobSupported = typeof Blob === 'function';
+        addTest('Blob Support', blobSupported,
+            blobSupported ? 'Blob API is supported' : 'Blob API is not supported');
+        
+        // Test if we can load Pyodide
+        let pyodideTest = false;
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js';
+        script.onload = () => {
+            pyodideTest = true;
+            addTest('Pyodide Loading', true, 'Pyodide CDN is accessible');
+        };
+        script.onerror = () => {
+            addTest('Pyodide Loading', false, 'Failed to load Pyodide from CDN');
+        };
+        document.head.appendChild(script);
+        
+        // Overall compatibility
+        const compatible = wasmSupported && fileApiSupported && blobSupported;
+        addTest('Overall Compatibility', compatible,
+            compatible ? 'Browser is compatible with PDF Bookmark Manager' : 
+                        'Browser may have compatibility issues');
+    </script>
+</body>
+</html>

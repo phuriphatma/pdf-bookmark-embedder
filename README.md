@@ -1,158 +1,80 @@
-# 📄 PDF Bookmark Embedder
+# PDF Bookmark Manager
 
-A simple, iOS Safari-optimized web application that automatically adds bookmarks to PDF files on pages 1, 3, and 6.
+A web application that allows users to upload PDF files and automatically add bookmarks to pages 1, 2, and 5. The application runs entirely in the browser using PyMuPDF via Pyodide, making it perfect for GitHub Pages hosting.
 
-## ✨ Features
+## Features
 
-- **🎯 Simple Interface**: Upload PDF → Get PDF with bookmarks
-- **📱 iOS Safari Optimized**: Perfect touch interface for mobile devices
-- **🔖 Automatic Bookmarks**: Adds bookmarks to pages 1, 3, and 6
-- **📥 Drag & Drop**: Easy file upload with visual feedback
-- **🔄 Reliable Processing**: Server-side PyMuPDF with client-side fallback
-- **🌐 Cross-Origin Support**: CORS-enabled for mobile browser compatibility
+- 📱 **Cross-platform**: Works on all devices including iPads
+- 🔒 **Privacy-focused**: All processing happens in your browser - no files are uploaded to any server
+- 📖 **Automatic bookmarks**: Adds bookmarks to pages 1, 2, and 5
+- 💾 **Easy download**: Download the modified PDF with bookmarks
+- 🎨 **Modern UI**: Clean, responsive interface that works on mobile devices
 
-## 🚀 Quick Start
+## How it works
 
-### Prerequisites
-- Node.js (v16 or later)
-- Python 3.7+ with pip
+1. **Upload**: Drop a PDF file or click to browse
+2. **Process**: The app uses PyMuPDF (running via Pyodide) to add bookmarks
+3. **Download**: Get your PDF back with bookmarks added
 
-### Installation
+## Technical Details
 
-1. **Install dependencies**:
+- **Frontend**: HTML5, CSS3, JavaScript
+- **PDF Processing**: PyMuPDF (via Pyodide WebAssembly)
+- **Hosting**: GitHub Pages compatible
+- **File Limit**: 50MB maximum file size
+- **Browser Support**: Modern browsers with WebAssembly support
+
+## Bookmarks Added
+
+The application automatically adds the following bookmarks:
+- Page 1: "Page 1"
+- Page 2: "Page 2" 
+- Page 5: "Page 5"
+
+Note: Bookmarks are only added if the corresponding pages exist in the PDF.
+
+## Local Development
+
+1. Clone the repository
+2. Serve the files using a local web server (required for Pyodide to work):
    ```bash
-   npm install
-   pip install -r server/requirements.txt
-   ```
-
-2. **Start the development servers**:
-   ```bash
-   # Option 1: Start both servers with network access
-   npm run network
+   # Using Python
+   python -m http.server 8000
    
-   # Option 2: Start servers separately
-   # Terminal 1: Start the web server
-   npm run dev
+   # Using Node.js
+   npx serve .
    
-   # Terminal 2: Start the PDF processing server
-   npm run server
+   # Using PHP
+   php -S localhost:8000
    ```
+3. Open `http://localhost:8000` in your browser
 
-3. **Access the application**:
-   - **Desktop**: http://localhost:3000
-   - **📱 iPad**: http://192.168.1.182:3000 (replace with your actual IP)
+## GitHub Pages Deployment
 
-## 📱 iOS Safari Usage
+1. Push the code to a GitHub repository
+2. Go to Settings > Pages
+3. Select "Deploy from a branch"
+4. Choose "main" branch and "/ (root)" folder
+5. Your app will be available at `https://yourusername.github.io/repository-name`
 
-1. Open the app in Safari on your iOS device
-2. Tap "Choose PDF File" or drag a PDF to the upload area
-3. Wait for processing (bookmarks added to pages 1, 3, 6)
-4. Tap "Download PDF with Bookmarks" to save the result
-5. Open the downloaded PDF in any app to see the bookmarks
+## Browser Compatibility
 
-## 🏗️ Architecture
+- Chrome/Edge: ✅ Full support
+- Firefox: ✅ Full support  
+- Safari: ✅ Full support (including iOS/iPadOS)
+- Opera: ✅ Full support
 
-### Frontend (Vite + Vanilla JS)
-- **main.js**: Core application logic with iOS optimizations
-- **style.css**: Mobile-first responsive design
-- **index.html**: Semantic HTML with proper touch targets
+## Privacy & Security
 
-### Backend (Python + PyMuPDF)
-- **server/bookmark_server.py**: HTTP server for PDF processing
-- **PyMuPDF Integration**: Reliable native bookmark embedding
-- **CORS Support**: Cross-origin requests for mobile browsers
+- No data is sent to any external servers
+- All PDF processing happens locally in your browser
+- Files are processed in memory and not stored anywhere
+- Uses secure WebAssembly technology
 
-## 🔧 Development
+## License
 
-### File Structure
-```
-pdfbookmark/
-├── index.html          # Main HTML file
-├── main.js            # Frontend application logic
-├── style.css          # iOS Safari optimized styles
-├── vite.config.js     # Vite configuration
-├── package.json       # NPM dependencies and scripts
-├── server/
-│   ├── bookmark_server.py  # Python PDF processing server
-│   └── requirements.txt    # Python dependencies
-└── .github/
-    └── copilot-instructions.md  # Development guidelines
-```
+MIT License - Feel free to use and modify as needed.
 
-### Available Scripts
+## Contributing
 
-```bash
-# Development
-npm run dev          # Start Vite dev server (frontend)
-npm run server       # Start Python bookmark server (backend)
-
-# Production
-npm run build        # Build for production
-npm run preview      # Preview production build
-```
-
-### Server Endpoints
-
-- `GET /health` - Server health check
-- `POST /embed-bookmarks` - Process PDF with bookmark embedding
-
-## 🎨 iOS Safari Optimizations
-
-- **Touch Targets**: Minimum 44px tap targets
-- **Viewport**: Proper mobile viewport settings
-- **Zoom Prevention**: Prevents unwanted zoom on input focus
-- **Touch Scroll**: Smooth scrolling with momentum
-- **File Upload**: Optimized file picker for iOS
-- **Visual Feedback**: Clear loading and success states
-
-## 🔖 Bookmark Details
-
-The application automatically adds bookmarks to:
-- **Page 1**: "📄 Page 1"
-- **Page 3**: "📄 Page 3" (if document has 3+ pages)
-- **Page 6**: "📄 Page 6" (if document has 6+ pages)
-
-Bookmarks are embedded as native PDF outline entries, making them visible in:
-- Adobe Reader
-- Apple Preview
-- PDF Expert
-- Any other PDF viewer that supports bookmarks
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Server not starting:**
-```bash
-# Install Python dependencies
-pip install pymupdf
-
-# Check Python version (requires 3.7+)
-python --version
-```
-
-**iOS Safari file upload not working:**
-- Ensure you're using Safari (not Chrome or Firefox)
-- Try tapping the upload button instead of drag & drop
-- Check that the file is actually a PDF
-
-**Bookmarks not visible:**
-- Ensure the PDF has at least 1 page for any bookmarks
-- Some PDF viewers may hide empty bookmark sections
-- Try opening in a different PDF viewer
-
-## 📝 License
-
-MIT License - feel free to use this for your own projects!
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes (keep iOS Safari compatibility in mind)
-4. Test on both desktop and iOS Safari
-5. Submit a pull request
-
----
-
-**Made with ❤️ for iOS Safari compatibility**
+Pull requests are welcome! Please feel free to submit issues and enhancement requests.
