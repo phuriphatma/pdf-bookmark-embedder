@@ -57,12 +57,17 @@ class PDFBookmarkManager {
                 import io
                 import js
                 from js import Uint8Array
+                import traceback
                 
                 def add_bookmarks_to_pdf(pdf_bytes):
                     """Add bookmarks to PDF and return the modified PDF bytes"""
                     try:
+                        print(f"Processing PDF of {len(pdf_bytes)} bytes")
+                        
                         # Open PDF from bytes
                         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                        page_count = len(doc)
+                        print(f"PDF has {page_count} pages")
                         
                         # Clear existing bookmarks
                         doc.set_toc([])
@@ -71,20 +76,26 @@ class PDFBookmarkManager {
                         bookmarks = []
                         
                         # Add bookmark for page 1 if it exists
-                        if len(doc) >= 1:
+                        if page_count >= 1:
                             bookmarks.append([1, "Page 1", 1])
+                            print("Added bookmark for page 1")
                         
                         # Add bookmark for page 2 if it exists
-                        if len(doc) >= 2:
+                        if page_count >= 2:
                             bookmarks.append([1, "Page 2", 2])
+                            print("Added bookmark for page 2")
                         
                         # Add bookmark for page 5 if it exists
-                        if len(doc) >= 5:
+                        if page_count >= 5:
                             bookmarks.append([1, "Page 5", 5])
+                            print("Added bookmark for page 5")
                         
                         # Set the bookmarks
                         if bookmarks:
                             doc.set_toc(bookmarks)
+                            print(f"Set {len(bookmarks)} bookmarks")
+                        else:
+                            print("No bookmarks added (PDF may have fewer than 1 page)")
                         
                         # Save to bytes
                         output_buffer = io.BytesIO()
@@ -92,9 +103,13 @@ class PDFBookmarkManager {
                         output_bytes = output_buffer.getvalue()
                         doc.close()
                         
+                        print(f"Generated output PDF of {len(output_bytes)} bytes")
                         return output_bytes
                     except Exception as e:
-                        raise Exception(f"Error processing PDF: {str(e)}")
+                        error_msg = f"Error processing PDF: {str(e)}"
+                        print(error_msg)
+                        print(traceback.format_exc())
+                        raise Exception(error_msg)
             `);
             
             this.updateStatus('Ready to process PDFs!', 100);
@@ -147,6 +162,12 @@ class PDFBookmarkManager {
             return;
         }
 
+        // Check if Pyodide is ready
+        if (!this.pyodide) {
+            this.showError('PDF processing environment not ready. Please wait for initialization to complete and try again.');
+            return;
+        }
+
         this.originalFileName = file.name;
         this.showStatus();
         
@@ -157,21 +178,34 @@ class PDFBookmarkManager {
             
             this.updateStatus('Processing PDF and adding bookmarks...', 40);
             
-            // Pass the PDF to Python for processing
+            // Pass the PDF to Python for processing with better error handling
             this.pyodide.globals.set('pdf_data', uint8Array);
             
             this.updateStatus('Adding bookmarks to pages 1, 2, and 5...', 70);
             
             const result = await this.pyodide.runPython(`
+                import traceback
                 try:
-                    processed_pdf = add_bookmarks_to_pdf(pdf_data.to_py())
+                    # Convert JS array to Python bytes
+                    pdf_bytes = bytes(pdf_data.to_py())
+                    
+                    # Process the PDF
+                    processed_pdf = add_bookmarks_to_pdf(pdf_bytes)
+                    
+                    # Return the processed PDF bytes
                     processed_pdf
                 except Exception as e:
-                    str(e)
+                    print(f"Python error: {e}")
+                    print(traceback.format_exc())
+                    f"ERROR: {str(e)}"
             `);
 
-            if (typeof result === 'string') {
-                throw new Error(result);
+            if (typeof result === 'string' && result.startsWith('ERROR:')) {
+                throw new Error(result.replace('ERROR: ', ''));
+            }
+
+            if (!result || result.length === 0) {
+                throw new Error('No data returned from PDF processing');
             }
 
             this.updateStatus('Finalizing...', 90);
@@ -189,24 +223,53 @@ class PDFBookmarkManager {
     }
 
     downloadProcessedPDF() {
+        console.log('Download requested, checking processed data...');
+        console.log('processedPdfData exists:', !!this.processedPdfData);
+        console.log('processedPdfData type:', typeof this.processedPdfData);
+        
         if (!this.processedPdfData) {
-            this.showError('No processed PDF data available.');
+            console.error('No processed PDF data available');
+            this.showError('No processed PDF data available. Please process a PDF first.');
+            return;
+        }
+
+        if (this.processedPdfData.length === 0) {
+            console.error('Processed PDF data is empty');
+            this.showError('Processed PDF data is empty. Please try processing the PDF again.');
             return;
         }
 
         try {
+            console.log('Creating blob from processed data...');
+            console.log('Data length:', this.processedPdfData.length);
+            
             const blob = new Blob([this.processedPdfData], { type: 'application/pdf' });
+            console.log('Blob created, size:', blob.size);
+            
+            if (blob.size === 0) {
+                throw new Error('Generated PDF blob is empty');
+            }
+            
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = this.originalFileName.replace('.pdf', '_with_bookmarks.pdf');
+            
+            // Generate download filename
+            const downloadName = this.originalFileName 
+                ? this.originalFileName.replace('.pdf', '_with_bookmarks.pdf')
+                : 'pdf_with_bookmarks.pdf';
+            a.download = downloadName;
+            
+            console.log('Triggering download:', downloadName);
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            
+            console.log('Download triggered successfully');
         } catch (error) {
             console.error('Error downloading PDF:', error);
-            this.showError('Error downloading the processed PDF.');
+            this.showError(`Error downloading the processed PDF: ${error.message}`);
         }
     }
 
