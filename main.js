@@ -19,7 +19,7 @@ class PDFBookmarkEmbedder {
                 lastModified: file.lastModified
             })
             console.log('🔗 Server URL:', `${this.serverUrl}/embed-bookmarks`)
-            
+
             // Send to server
             const formData = new FormData()
             formData.append('pdf', file)
@@ -47,7 +47,7 @@ class PDFBookmarkEmbedder {
         const currentHost = window.location.hostname
         const currentPort = window.location.port
         const currentProtocol = window.location.protocol
-        
+
         if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
             // Development mode - separate backend server
             return 'http://localhost:8081'
@@ -125,7 +125,7 @@ class PDFBookmarkEmbedder {
         this.elements.uploadArea.addEventListener('drop', (e) => {
             e.preventDefault()
             this.elements.uploadArea.classList.remove('dragover')
-            
+
             const files = e.dataTransfer.files
             if (files.length > 0 && files[0].type === 'application/pdf') {
                 this.handleFileUpload(files[0])
@@ -157,7 +157,7 @@ class PDFBookmarkEmbedder {
                 method: 'GET',
                 mode: 'cors'
             })
-            
+
             if (response.ok) {
                 console.log('✅ Server is available')
             } else {
@@ -183,7 +183,7 @@ class PDFBookmarkEmbedder {
 
     async handleFileUpload(file) {
         console.log('📁 File uploaded:', file.name, file.size, 'bytes')
-        
+
         // Validate file
         if (!this.validateFile(file)) {
             return
@@ -191,25 +191,25 @@ class PDFBookmarkEmbedder {
 
         this.currentFile = file
         this.showProcessing()
-        
+
         try {
             // Show processing steps
             this.updateProcessingStatus('Reading PDF file...')
             await this.delay(500)
-            
+
             this.updateProcessingStatus('Adding bookmarks to pages 1, 3, and 6...')
             await this.delay(1000)
-            
+
             // Process the PDF
             const result = await this.processPDF(file)
-            
+
             if (result.success) {
                 this.processedPdfData = result.data
                 this.showResult()
             } else {
                 this.showError(result.error || 'Processing failed')
             }
-            
+
         } catch (error) {
             console.error('❌ Processing error:', error)
             this.showError(error.message || 'Processing failed')
@@ -244,7 +244,7 @@ class PDFBookmarkEmbedder {
             // Create form data
             const formData = new FormData()
             formData.append('pdf', file)
-            
+
             // Add default bookmarks for pages 1, 3, and 6
             const defaultBookmarks = [
                 { title: 'Page 1', page: 1, level: 1 },
@@ -252,7 +252,7 @@ class PDFBookmarkEmbedder {
                 { title: 'Page 6', page: 6, level: 1 }
             ]
             formData.append('bookmarks', JSON.stringify(defaultBookmarks))
-            
+
             console.log('📤 Sending PDF to server for processing...')
             console.log('🗃️ File details:', {
                 name: file.name,
@@ -260,7 +260,7 @@ class PDFBookmarkEmbedder {
                 type: file.type,
                 lastModified: file.lastModified
             })
-            
+
             // Send to server
             const response = await fetch(`${this.serverUrl}/embed-bookmarks`, {
                 method: 'POST',
@@ -280,11 +280,11 @@ class PDFBookmarkEmbedder {
             // Check if we got a PDF back
             const contentType = response.headers.get('content-type')
             console.log('📄 Response content type:', contentType)
-            
+
             if (contentType && contentType.includes('application/pdf')) {
                 const result = await response.blob()
                 console.log('✅ PDF processed successfully, size:', result.size, 'bytes')
-                
+
                 return {
                     success: true,
                     data: result
@@ -295,10 +295,10 @@ class PDFBookmarkEmbedder {
                 console.error('❌ Unexpected response format:', errorData)
                 throw new Error('Server returned unexpected response format')
             }
-            
+
         } catch (error) {
             console.error('❌ Server processing failed:', error)
-            
+
             // Try client-side fallback
             console.log('🔄 Attempting client-side processing fallback...')
             return await this.clientSideFallback(file)
@@ -309,29 +309,29 @@ class PDFBookmarkEmbedder {
         try {
             // Import pdf-lib dynamically for client-side processing
             const { PDFDocument } = await import('pdf-lib')
-            
+
             this.updateProcessingStatus('Using client-side fallback...')
-            
+
             // Read the PDF
             const arrayBuffer = await file.arrayBuffer()
             const pdfDoc = await PDFDocument.load(arrayBuffer)
-            
+
             // Add metadata bookmarks (limited functionality)
             pdfDoc.setTitle(`${file.name} - With Bookmarks`)
             pdfDoc.setKeywords('PDF Bookmark Embedder, Page 1, Page 3, Page 6')
             pdfDoc.setSubject('PDF with embedded bookmarks on pages 1, 3, and 6')
-            
+
             // Save the PDF
             const pdfBytes = await pdfDoc.save()
             const blob = new Blob([pdfBytes], { type: 'application/pdf' })
-            
+
             console.log('✅ Client-side processing completed')
-            
+
             return {
                 success: true,
                 data: blob
             }
-            
+
         } catch (error) {
             console.error('❌ Client-side fallback failed:', error)
             return {
@@ -353,17 +353,17 @@ class PDFBookmarkEmbedder {
             const link = document.createElement('a')
             link.href = url
             link.download = this.getDownloadFilename()
-            
+
             // Trigger download
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
-            
+
             // Clean up
             URL.revokeObjectURL(url)
-            
+
             console.log('📥 Download triggered')
-            
+
         } catch (error) {
             console.error('❌ Download failed:', error)
             this.showError('Download failed. Please try again.')
@@ -429,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Handle iOS Safari specific behaviors
 if (navigator.userAgent.includes('Safari') && navigator.userAgent.includes('Mobile')) {
     console.log('📱 iOS Safari detected - optimized mode active')
-    
+
     // Prevent zoom on file input
-    document.addEventListener('touchstart', () => {}, { passive: true })
+    document.addEventListener('touchstart', () => { }, { passive: true })
 }

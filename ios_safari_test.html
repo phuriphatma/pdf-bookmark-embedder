@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,13 +13,15 @@
             padding: 20px;
             background: #f5f5f5;
         }
+
         .test-card {
             background: white;
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
+
         button {
             background: #007AFF;
             color: white;
@@ -30,9 +33,11 @@
             width: 100%;
             margin: 10px 0;
         }
+
         button:hover {
             background: #0056b3;
         }
+
         .log {
             background: #f8f9fa;
             padding: 10px;
@@ -43,6 +48,7 @@
             max-height: 200px;
             overflow-y: auto;
         }
+
         input[type="file"] {
             width: 100%;
             padding: 10px;
@@ -52,9 +58,10 @@
         }
     </style>
 </head>
+
 <body>
     <h1>📱 iOS Safari PDF Test</h1>
-    
+
     <div class="test-card">
         <h3>🧪 Test 1: Server Connectivity</h3>
         <button onclick="testServerHealth()">Test Server Health</button>
@@ -75,8 +82,8 @@
     </div>
 
     <script>
-        const SERVER_URL = window.location.hostname === 'localhost' 
-            ? 'http://localhost:8081' 
+        const SERVER_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:8081'
             : `http://${window.location.hostname}:8081`;
 
         function log(elementId, message) {
@@ -88,7 +95,7 @@
         async function testServerHealth() {
             const logId = 'health-log';
             log(logId, '🔍 Testing server health...');
-            
+
             try {
                 const response = await fetch(`${SERVER_URL}/health`);
                 if (response.ok) {
@@ -107,7 +114,7 @@
         async function testFileUpload() {
             const logId = 'upload-log';
             const fileInput = document.getElementById('fileInput');
-            
+
             if (!fileInput.files.length) {
                 log(logId, '❌ Please select a PDF file first');
                 return;
@@ -127,15 +134,15 @@
                 });
 
                 log(logId, `📡 Response: ${response.status} ${response.statusText}`);
-                
+
                 if (response.ok) {
                     const contentType = response.headers.get('content-type');
                     log(logId, `📄 Content-Type: ${contentType}`);
-                    
+
                     if (contentType && contentType.includes('application/pdf')) {
                         const blob = await response.blob();
                         log(logId, `✅ PDF received: ${blob.size} bytes`);
-                        
+
                         // Test download
                         downloadBlob(blob, 'test_with_bookmarks.pdf', logId);
                     } else {
@@ -154,11 +161,11 @@
         async function testDownloadMethod() {
             const logId = 'download-log';
             log(logId, '🧪 Testing download method with sample data...');
-            
+
             // Create a simple test blob
             const testData = '%PDF-1.4\\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>endobj xref 0 4 0000000000 65535 f 0000000009 00000 n 0000000058 00000 n 0000000115 00000 n trailer<</Size 4/Root 1 0 R>> startxref 185 %%EOF';
             const blob = new Blob([testData], { type: 'application/pdf' });
-            
+
             log(logId, `📄 Created test blob: ${blob.size} bytes`);
             downloadBlob(blob, 'test_download.pdf', logId);
         }
@@ -166,32 +173,32 @@
         function downloadBlob(blob, filename, logId) {
             try {
                 log(logId, '📥 Creating download link...');
-                
+
                 // Method 1: Standard download link
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = filename;
                 link.style.display = 'none';
-                
+
                 document.body.appendChild(link);
-                
+
                 log(logId, '🖱️ Triggering download...');
                 link.click();
-                
+
                 // Clean up
                 setTimeout(() => {
                     document.body.removeChild(link);
                     URL.revokeObjectURL(url);
                     log(logId, '🧹 Cleaned up resources');
                 }, 1000);
-                
+
                 log(logId, '✅ Download should have started');
-                
+
                 // iOS Safari specific test
                 if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
                     log(logId, '📱 iOS detected - testing alternative method...');
-                    
+
                     // Method 2: Open in new tab for iOS
                     setTimeout(() => {
                         const newUrl = URL.createObjectURL(blob);
@@ -199,7 +206,7 @@
                         log(logId, '🔗 Opened PDF in new tab for iOS');
                     }, 2000);
                 }
-                
+
             } catch (error) {
                 log(logId, `❌ Download failed: ${error.message}`);
             }
@@ -211,4 +218,5 @@
         });
     </script>
 </body>
+
 </html>

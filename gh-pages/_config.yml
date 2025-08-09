@@ -1,0 +1,17 @@
+# GitHub Pages configuration
+# This file ensures proper deployment on GitHub Pages
+
+# Include all necessary files
+include:
+  - "*.html"
+  - "*.css" 
+  - "*.js"
+  - "*.md"
+  - "*.json"
+
+# Exclude development files
+exclude:
+  - "node_modules/"
+  - "*.log"
+  - ".DS_Store"
+  - "Thumbs.db"
