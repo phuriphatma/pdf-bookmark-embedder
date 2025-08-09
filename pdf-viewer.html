@@ -1074,12 +1074,13 @@
                 const scrollTop = viewer.scrollTop;
                 const viewerHeight = viewer.clientHeight;
 
+                // Use offsetTop for more stable position calculation
                 pages.forEach((page, index) => {
-                    const rect = page.getBoundingClientRect();
-                    const viewerRect = viewer.getBoundingClientRect();
-                    const relativeTop = rect.top - viewerRect.top + viewer.scrollTop;
+                    const pageTop = page.offsetTop;
+                    const pageHeight = page.offsetHeight;
                     
-                    if (relativeTop <= scrollTop + viewerHeight / 2) {
+                    // Page is considered current if its center is within viewport
+                    if (pageTop + pageHeight / 2 <= scrollTop + viewerHeight / 2) {
                         currentPage = index + 1;
                     }
                 });
@@ -1107,7 +1108,24 @@
 
                 const pageElement = this.elements.pdfViewer.querySelector(`[data-page-number="${pageNum}"]`);
                 if (pageElement) {
-                    pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Get the PDF viewer container
+                    const viewer = this.elements.pdfViewer;
+                    const viewerRect = viewer.getBoundingClientRect();
+                    const pageRect = pageElement.getBoundingClientRect();
+                    
+                    // Calculate the scroll position to center the page safely
+                    const targetScrollTop = viewer.scrollTop + pageRect.top - viewerRect.top - 20;
+                    
+                    // Ensure we don't scroll out of bounds
+                    const maxScrollTop = viewer.scrollHeight - viewer.clientHeight;
+                    const safeScrollTop = Math.max(0, Math.min(targetScrollTop, maxScrollTop));
+                    
+                    // Smooth scroll to the calculated position
+                    viewer.scrollTo({
+                        top: safeScrollTop,
+                        behavior: 'smooth'
+                    });
+                    
                     this.currentPage = pageNum;
                     this.updateNavigationState();
                 }
