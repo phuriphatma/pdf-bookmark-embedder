@@ -128,6 +128,31 @@ class PDFBookmarkManager {
         }
     }
 
+    arrayBufferToBase64(uint8Array) {
+        // Convert Uint8Array to base64 in chunks to avoid call stack overflow
+        const chunkSize = 8192; // Process 8KB at a time
+        let binary = '';
+        
+        for (let i = 0; i < uint8Array.length; i += chunkSize) {
+            const chunk = uint8Array.slice(i, i + chunkSize);
+            binary += String.fromCharCode.apply(null, chunk);
+        }
+        
+        return btoa(binary);
+    }
+
+    base64ToUint8Array(base64String) {
+        // Convert base64 back to Uint8Array safely
+        const binaryString = atob(base64String);
+        const bytes = new Uint8Array(binaryString.length);
+        
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        return bytes;
+    }
+
     handleDragOver(e) {
         e.preventDefault();
         this.uploadArea.classList.add('dragover');
@@ -181,9 +206,9 @@ class PDFBookmarkManager {
             const arrayBuffer = await file.arrayBuffer();
             const uint8Array = new Uint8Array(arrayBuffer);
             
-            // Convert to base64 for reliable transfer to Python
+            // Convert to base64 for reliable transfer to Python (chunked to avoid stack overflow)
             this.updateStatus('Converting PDF data...', 30);
-            const base64String = btoa(String.fromCharCode.apply(null, uint8Array));
+            const base64String = this.arrayBufferToBase64(uint8Array);
             
             this.updateStatus('Processing PDF and adding bookmarks...', 50);
             
@@ -207,12 +232,8 @@ class PDFBookmarkManager {
 
             this.updateStatus('Converting result...', 85);
             
-            // Convert base64 back to binary for download
-            const binaryString = atob(result);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
+            // Convert base64 back to binary for download using helper function
+            const bytes = this.base64ToUint8Array(result);
             
             this.updateStatus('Finalizing...', 90);
             this.processedPdfData = bytes;
