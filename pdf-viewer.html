@@ -687,11 +687,22 @@
             }
 
             getServerUrl() {
+                // In production (Railway), frontend and backend are on the same server
                 const currentHost = window.location.hostname;
-                if (currentHost !== 'localhost' && currentHost !== '127.0.0.1') {
-                    return `http://${currentHost}:8081`;
+                const currentPort = window.location.port;
+                const currentProtocol = window.location.protocol;
+                
+                if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+                    // Development mode - separate backend server
+                    return 'http://localhost:8081';
+                } else {
+                    // Production mode - same server for frontend and backend
+                    if (currentPort) {
+                        return `${currentProtocol}//${currentHost}:${currentPort}`;
+                    } else {
+                        return `${currentProtocol}//${currentHost}`;
+                    }
                 }
-                return 'http://localhost:8081';
             }
 
             setupKeyboardHandling() {

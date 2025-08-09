@@ -26,6 +26,10 @@ class PDFBookmarkHandler(BaseHTTPRequestHandler):
         if self.path == '/health':
             self.send_health_check()
         elif self.path == '/' or self.path == '/index.html':
+            # Serve the PDF viewer with interactive bookmarks as the main page
+            self.serve_static_file('pdf-viewer.html', 'text/html')
+        elif self.path == '/simple' or self.path == '/uploader':
+            # Serve the simple uploader as an alternative
             self.serve_static_file('dist/index.html', 'text/html')
         elif self.path.startswith('/assets/'):
             # Serve CSS and JS files from dist/assets/
