@@ -65,10 +65,15 @@ class PDFBookmarkHandler(BaseHTTPRequestHandler):
         """Serve static files (HTML, CSS, JS)"""
         try:
             import os
+            print(f"🔍 Attempting to serve: {file_path}")
+            print(f"📁 Current working directory: {os.getcwd()}")
+            print(f"📂 File exists: {os.path.exists(file_path)}")
+            
             if os.path.exists(file_path):
                 with open(file_path, 'rb') as f:
                     content = f.read()
                 
+                print(f"✅ Serving {file_path} ({len(content)} bytes)")
                 self.send_response(200)
                 self.send_cors_headers()
                 self.send_header('Content-Type', content_type)
@@ -76,9 +81,17 @@ class PDFBookmarkHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(content)
             else:
+                # List directory contents for debugging
+                dir_path = os.path.dirname(file_path) or '.'
+                if os.path.exists(dir_path):
+                    files = os.listdir(dir_path)
+                    print(f"📂 Directory {dir_path} contents: {files}")
+                print(f"❌ File not found: {file_path}")
                 self.send_error(404, f"File not found: {file_path}")
         except Exception as e:
             print(f"❌ Error serving static file {file_path}: {e}")
+            import traceback
+            traceback.print_exc()
             self.send_error(500, f"Internal server error: {str(e)}")
 
     def send_health_check(self):
