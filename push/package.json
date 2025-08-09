@@ -1,0 +1,29 @@
+{
+  "name": "pdf-bookmark-manager",
+  "version": "1.0.0",
+  "description": "A web application that adds bookmarks to PDF files using PyMuPDF in the browser",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "serve": "npx serve .",
+    "dev": "python -m http.server 8000"
+  },
+  "keywords": [
+    "pdf",
+    "bookmarks",
+    "pymupdf",
+    "pyodide",
+    "webassembly",
+    "github-pages"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/pdf-bookmark-manager.git"
+  },
+  "homepage": "https://yourusername.github.io/pdf-bookmark-manager",
+  "devDependencies": {
+    "serve": "^14.0.0"
+  }
+}
