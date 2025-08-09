@@ -25,6 +25,19 @@ class PDFBookmarkHandler(BaseHTTPRequestHandler):
         """Handle GET requests"""
         if self.path == '/health':
             self.send_health_check()
+        elif self.path == '/' or self.path == '/index.html':
+            self.serve_static_file('dist/index.html', 'text/html')
+        elif self.path.startswith('/assets/'):
+            # Serve CSS and JS files from dist/assets/
+            file_path = f"dist{self.path}"
+            if self.path.endswith('.css'):
+                self.serve_static_file(file_path, 'text/css')
+            elif self.path.endswith('.js'):
+                self.serve_static_file(file_path, 'application/javascript')
+            elif self.path.endswith('.js.map'):
+                self.serve_static_file(file_path, 'application/json')
+            else:
+                self.send_error(404, "File not found")
         else:
             self.send_error(404, "Endpoint not found")
 
@@ -47,6 +60,26 @@ class PDFBookmarkHandler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.send_header('Access-Control-Max-Age', '86400')
+
+    def serve_static_file(self, file_path, content_type):
+        """Serve static files (HTML, CSS, JS)"""
+        try:
+            import os
+            if os.path.exists(file_path):
+                with open(file_path, 'rb') as f:
+                    content = f.read()
+                
+                self.send_response(200)
+                self.send_cors_headers()
+                self.send_header('Content-Type', content_type)
+                self.send_header('Content-Length', str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+            else:
+                self.send_error(404, f"File not found: {file_path}")
+        except Exception as e:
+            print(f"❌ Error serving static file {file_path}: {e}")
+            self.send_error(500, f"Internal server error: {str(e)}")
 
     def send_health_check(self):
         """Send health check response"""
