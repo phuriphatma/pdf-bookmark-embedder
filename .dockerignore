@@ -1,0 +1,9 @@
+node_modules
+.git
+*.log
+*.tmp
+.cache
+.env.local
+.env.*.local
+# Include dist folder for deployment
+!dist
