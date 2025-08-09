@@ -43,10 +43,21 @@ class PDFBookmarkEmbedder {
     }
 
     getServerUrl() {
-        // If we're accessing from a different device, use the current host
+        // In production (Railway), frontend and backend are on the same server
         const currentHost = window.location.hostname
-        if (currentHost !== 'localhost' && currentHost !== '127.0.0.1') {
-            return `http://${currentHost}:8081`
+        const currentPort = window.location.port
+        const currentProtocol = window.location.protocol
+        
+        if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+            // Development mode - separate backend server
+            return 'http://localhost:8081'
+        } else {
+            // Production mode - same server for frontend and backend
+            if (currentPort) {
+                return `${currentProtocol}//${currentHost}:${currentPort}`
+            } else {
+                return `${currentProtocol}//${currentHost}`
+            }
         }
         return 'http://localhost:8081'
     }
@@ -234,8 +245,16 @@ class PDFBookmarkEmbedder {
             const formData = new FormData()
             formData.append('pdf', file)
             
+            // Add default bookmarks for pages 1, 3, and 6
+            const defaultBookmarks = [
+                { title: 'Page 1', page: 1, level: 1 },
+                { title: 'Page 3', page: 3, level: 1 },
+                { title: 'Page 6', page: 6, level: 1 }
+            ]
+            formData.append('bookmarks', JSON.stringify(defaultBookmarks))
+            
             console.log('📤 Sending PDF to server for processing...')
-            console.log('� File details:', {
+            console.log('🗃️ File details:', {
                 name: file.name,
                 size: file.size,
                 type: file.type,
